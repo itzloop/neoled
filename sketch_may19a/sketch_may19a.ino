@@ -290,6 +290,9 @@ unsigned char *get_symbol(char ch, int *len)
   case 'H':
     *len = sizeof(H) / sizeof(H[0]);
     return H;
+   case '0':
+    *len = sizeof(ZERO) / sizeof(ZERO[0]);
+    return ZERO;
    case '1':
     *len = sizeof(ONE) / sizeof(ONE[0]);
     return ONE;
@@ -329,7 +332,7 @@ unsigned char *get_symbol(char ch, int *len)
 tmElements_t rtime;
 int i = 0, j = 0, k = 0, idx = 0, res = 0, value = 0;
 unsigned long int currentms, prevms = 0;
-int current_chr = 0, current_col = 0, counter = 0;
+int current_chr = 0, current_col = 0, counter = 0, btnHour, btnMin, lastbtnHour, lastbtnMin;
 unsigned char* str = NULL;
 enum State { NAME, CLEAR_SCREEN, CLOCK };
 enum State state = NAME;
@@ -394,11 +397,6 @@ void show_name() {
 
   // move to the next column for this character
   current_col++;
-
-  // if we showed the character reset col and move current_chr forward
- // if (current_col >= COL_MAX) {
- //   current_col = 0; current_chr++;
- // }
 }
 
 void shift_leds() {
@@ -415,13 +413,16 @@ void shift_leds() {
 
 void show_clock(int m, int h){
   // h1h2:m1m2
-  char t[] = {(char)(h / 10) + '0', (char)(h % 10) + '0', (char)(m / 10) + '0', (char)(m % 10) + '0'};
-
-  for (k = 0; k < 4; k++){
+  char t[] = {(char)(h / 10) + '0', (char)(h % 10) + '0' , (char)(m / 10) + '0', (char)(m % 10) + '0'};
+  int len = sizeof(t)/ sizeof(t[0]);
+  for (k = 0; k < len; k++){
     int len = 0;
     unsigned char* symbol = get_symbol(t[k], &len);
     for (i = 0; i < LED_H; i++) {
       for (j = k * COL_MAX; j < (k + 1) * COL_MAX; j++) {
+        //if ( j  >= symbol[len - 1] + (k * COL_MAX)) {
+          //break;
+        //}
         value = symbol[i];
         // shift value to get the bit pointed by current col      
         int shift = (COL_MAX - 1) - (j % COL_MAX);
@@ -474,6 +475,24 @@ void loop()
     }
     break;
   }
+
+  btnHour = digitalRead(HOUR);
+  btnMin = digitalRead(MIN);
+
+  if (btnHour != lastbtnHour && btnHour == HIGH) {
+      rtime.Hour++;
+      rtime.Hour %= 24;
+      RTC.write(rtime);
+   }
+
+   if (btnMin != lastbtnMin && btnMin == HIGH) {
+      rtime.Minute++;
+      rtime.Minute %= 60;
+      RTC.write(rtime);
+   }
+
+  lastbtnHour = btnHour;
+  lastbtnMin = btnMin;
 
   // show shifted leds
   FastLED.show();
